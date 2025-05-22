@@ -2,196 +2,111 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NotaFácil.ai - Gerador de Recibos</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-100 font-sans">
-  <div class="max-w-2xl mx-auto p-6 mt-10 bg-white rounded-xl shadow-md">
-    <h1 class="text-2xl font-bold mb-4 text-center text-indigo-600">NotaFácil.ai</h1>
-    <p class="text-center text-gray-600 mb-6">Gere recibos profissionais de forma simples e rápida</p>
-
-    <div id="loginSection" class="mb-6">
-      <label class="block text-gray-700 mb-2">Digite seu nome para iniciar sessão:</label>
-      <input type="text" id="username" class="w-full p-2 border rounded" placeholder="Ex: João Silva" />
-      <button onclick="login()" class="mt-2 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full">Entrar</button>
-    </div>
-
-    <div id="mainApp" class="hidden">
-      <form id="reciboForm" class="space-y-4">
-        <div>
-          <label class="block text-gray-700">Nome de quem paga:</label>
-          <input type="text" name="pagador" required class="w-full p-2 border rounded" />
-        </div>
-        <div>
-          <label class="block text-gray-700">Nome de quem recebe:</label>
-          <input type="text" name="recebedor" required class="w-full p-2 border rounded" />
-        </div>
-        <div>
-          <label class="block text-gray-700">Valor (R$):</label>
-          <input type="number" name="valor" required class="w-full p-2 border rounded" />
-        </div>
-        <div>
-          <label class="block text-gray-700">Descrição do serviço/produto:</label>
-          <input type="text" name="descricao" required class="w-full p-2 border rounded" />
-        </div>
-        <div>
-          <label class="block text-gray-700">Data:</label>
-          <input type="date" name="data" required class="w-full p-2 border rounded" />
-        </div>
-        <div>
-          <label class="block text-gray-700">Assinatura digital (imagem):</label>
-          <input type="file" name="assinatura" accept="image/*" class="w-full p-2 border rounded" />
-        </div>
-        <button type="submit" class="w-full bg-indigo-600 text-white p-2 rounded hover:bg-indigo-700">Gerar Recibo</button>
-      </form>
-
-      <div id="reciboOutput" class="mt-8 hidden">
-        <h2 class="text-xl font-semibold mb-2">Recibo Gerado:</h2>
-        <div id="reciboContent" class="p-4 border rounded bg-gray-50"></div>
-        <div class="flex justify-between mt-4">
-          <button onclick="baixarPDF()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Baixar PDF</button>
-          <a id="whatsappLink" href="#" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Enviar por WhatsApp</a>
-        </div>
-      </div>
-
-      <div id="historico" class="mt-10 hidden">
-        <h2 class="text-xl font-semibold mb-2">Histórico de Recibos</h2>
-        <ul id="listaHistorico" class="space-y-2"></ul>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script>
-    let currentUser = null;
-
-    function login() {
-      const input = document.getElementById('username');
-      if (input.value.trim()) {
-        currentUser = input.value.trim();
-        localStorage.setItem('notafacil_user', currentUser);
-        document.getElementById('loginSection').classList.add('hidden');
-        document.getElementById('mainApp').classList.remove('hidden');
-        mostrarHistorico();
-      }
-    }
-
-    window.onload = function () {
-      const savedUser = localStorage.getItem('notafacil_user');
-      if (savedUser) {
-        currentUser = savedUser;
-        document.getElementById('loginSection').classList.add('hidden');
-        document.getElementById('mainApp').classList.remove('hidden');
-        mostrarHistorico();
-      }
-    }
-
-    const form = document.getElementById('reciboForm');
-    const reciboOutput = document.getElementById('reciboOutput');
-    const reciboContent = document.getElementById('reciboContent');
-    const whatsappLink = document.getElementById('whatsappLink');
-    const listaHistorico = document.getElementById('listaHistorico');
-
-    form.addEventListener('submit', function(event) {
-      event.preventDefault();
-
-      const pagador = form.pagador.value;
-      const recebedor = form.recebedor.value;
-      const valor = parseFloat(form.valor.value).toFixed(2);
-      const descricao = form.descricao.value;
-      const data = form.data.value;
-      const assinaturaFile = form.assinatura.files[0];
-
-      let assinaturaHTML = '';
-      if (assinaturaFile) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          assinaturaHTML = `<img src="${e.target.result}" alt="Assinatura" class="mt-2 max-h-24" />`;
-          renderRecibo();
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotaFácil.ai - Gerador de Recibos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: auto;
+            background-color: #f7f7f7;
         }
-        reader.readAsDataURL(assinaturaFile);
-      } else {
-        renderRecibo();
-      }
+        h1 {
+            color: #2c3e50;
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #recibo {
+            margin-top: 40px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .assinatura {
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <h1>NotaFácil.ai - Gerador de Recibos</h1>
+    <label for="nome">Nome do cliente</label>
+    <input type="text" id="nome" placeholder="Ex: João da Silva">
 
-      function renderRecibo() {
-        const reciboHTML = `
-          <p>Recebi(emos) de <strong>${pagador}</strong> a quantia de <strong>R$ ${valor}</strong>, referente a <strong>${descricao}</strong>.</p>
-          <p>Emitido em <strong>${data}</strong>.</p>
-          <div class="mt-4">
-            <p>Assinatura:</p>
-            ${assinaturaHTML || '<p>___________________________</p>'}
-          </div>
-          <p class="text-sm text-gray-400 mt-4">Este recibo tem caráter informativo e não substitui nota fiscal.</p>
-        `;
-        reciboContent.innerHTML = reciboHTML;
-        reciboOutput.classList.remove('hidden');
+    <label for="servico">Serviço prestado</label>
+    <input type="text" id="servico" placeholder="Ex: Consultoria de marketing">
 
-        const mensagemWhatsApp = `Recibo:\nRecebi(emos) de ${pagador} a quantia de R$ ${valor}, referente a ${descricao}. Emitido em ${data}.`;
-        const link = `https://wa.me/?text=${encodeURIComponent(mensagemWhatsApp)}`;
-        whatsappLink.href = link;
+    <label for="valor">Valor (R$)</label>
+    <input type="text" id="valor" placeholder="Ex: 500,00">
 
-        const allRecibos = JSON.parse(localStorage.getItem('recibos') || '{}');
-        if (!allRecibos[currentUser]) allRecibos[currentUser] = [];
-        allRecibos[currentUser].push({ pagador, recebedor, valor, descricao, data });
-        localStorage.setItem('recibos', JSON.stringify(allRecibos));
-        mostrarHistorico();
-      }
-    });
+    <label for="data">Data</label>
+    <input type="date" id="data">
 
-    function baixarPDF() {
-      const element = document.getElementById("reciboContent");
-      html2pdf().from(element).save("recibo.pdf");
-    }
+    <label for="cidade">Cidade</label>
+    <input type="text" id="cidade" placeholder="Ex: São Paulo">
 
-    function mostrarHistorico() {
-      const allRecibos = JSON.parse(localStorage.getItem('recibos') || '{}');
-      const historico = allRecibos[currentUser] || [];
-      listaHistorico.innerHTML = '';
-      historico.forEach((r, index) => {
-        const li = document.createElement('li');
-        li.className = 'p-2 border rounded bg-gray-100 flex justify-between items-center';
-        li.innerHTML = `
-          <div>
-            <strong>${r.data}</strong> - ${r.pagador} pagou R$ ${r.valor} para ${r.recebedor} (${r.descricao})
-          </div>
-          <div class="space-x-2">
-            <button onclick="editarRecibo(${index})" class="text-indigo-600 hover:underline">Editar</button>
-            <button onclick="excluirRecibo(${index})" class="text-red-600 hover:underline">Excluir</button>
-          </div>
-        `;
-        listaHistorico.appendChild(li);
-      });
-      if (historico.length > 0) {
-        document.getElementById('historico').classList.remove('hidden');
-      }
-    }
+    <label for="estado">Estado</label>
+    <input type="text" id="estado" placeholder="Ex: SP">
 
-    function excluirRecibo(index) {
-      const allRecibos = JSON.parse(localStorage.getItem('recibos') || '{}');
-      if (!allRecibos[currentUser]) return;
-      allRecibos[currentUser].splice(index, 1);
-      localStorage.setItem('recibos', JSON.stringify(allRecibos));
-      mostrarHistorico();
-    }
+    <button onclick="gerarRecibo()">Gerar Recibo</button>
 
-    function editarRecibo(index) {
-      const allRecibos = JSON.parse(localStorage.getItem('recibos') || '{}');
-      const r = allRecibos[currentUser][index];
-      form.pagador.value = r.pagador;
-      form.recebedor.value = r.recebedor;
-      form.valor.value = r.valor;
-      form.descricao.value = r.descricao;
-      form.data.value = r.data;
+    <div id="recibo" style="display:none;"></div>
 
-      // Remover o recibo original
-      allRecibos[currentUser].splice(index, 1);
-      localStorage.setItem('recibos', JSON.stringify(allRecibos));
-      mostrarHistorico();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  </script>
+    <script>
+        function gerarRecibo() {
+            const nome = document.getElementById("nome").value;
+            const servico = document.getElementById("servico").value;
+            const valor = document.getElementById("valor").value;
+            const data = document.getElementById("data").value;
+            const cidade = document.getElementById("cidade").value;
+            const estado = document.getElementById("estado").value;
+
+            if (!nome || !servico || !valor || !data || !cidade || !estado) {
+                alert("Por favor, preencha todos os campos.");
+                return;
+            }
+
+            const dataFormatada = new Date(data).toLocaleDateString("pt-BR");
+
+            const recibo = `
+                <h2>RECIBO</h2>
+                <p>Recebi(emos) de <strong>${nome}</strong> a quantia de <strong>R$ ${valor}</strong> referente ao serviço de <strong>${servico}</strong>.</p>
+                <p>Para maior clareza firmo(amos) o presente recibo.</p>
+                <p>${cidade} - ${estado}, ${dataFormatada}</p>
+                <div class="assinatura">
+                    _______________________________________<br>
+                    Assinatura do Prestador
+                </div>
+            `;
+
+            const reciboDiv = document.getElementById("recibo");
+            reciboDiv.innerHTML = recibo;
+            reciboDiv.style.display = "block";
+        }
+    </script>
 </body>
 </html>
