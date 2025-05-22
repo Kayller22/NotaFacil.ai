@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NotaFácil.ai - Gerador de Recibos</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -34,7 +36,7 @@
             box-sizing: border-box;
         }
         .btn {
-            margin-top: 20px;
+            margin: 10px 5px;
             padding: 12px 24px;
             background-color: #4CAF50;
             color: white;
@@ -62,43 +64,42 @@
             margin-top: 20px;
             text-align: center;
         }
-        .input-group {
-            margin-bottom: 15px;
+        #historico {
+            margin-top: 40px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        }
+        .recibo-item {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
         }
     </style>
 </head>
 <body>
     <h1>NotaFácil.ai - Gerador de Recibos</h1>
 
-    <div class="input-group">
-        <label for="nome">Nome do cliente</label>
-        <input type="text" id="nome" placeholder="Ex: João da Silva">
-    </div>
+    <label for="nome">Nome do cliente</label>
+    <input type="text" id="nome">
 
-    <div class="input-group">
-        <label for="servico">Serviço prestado</label>
-        <input type="text" id="servico" placeholder="Ex: Consultoria de marketing">
-    </div>
+    <label for="servico">Serviço prestado</label>
+    <input type="text" id="servico">
 
-    <div class="input-group">
-        <label for="valor">Valor (R$)</label>
-        <input type="text" id="valor" placeholder="Ex: 500,00">
-    </div>
+    <label for="valor">Valor (R$)</label>
+    <input type="text" id="valor">
 
-    <div class="input-group">
-        <label for="data">Data</label>
-        <input type="date" id="data">
-    </div>
+    <label for="data">Data</label>
+    <input type="date" id="data">
 
-    <div class="input-group">
-        <label for="cidade">Cidade</label>
-        <input type="text" id="cidade" placeholder="Ex: São Paulo">
-    </div>
+    <label for="cidade">Cidade</label>
+    <input type="text" id="cidade">
 
-    <div class="input-group">
-        <label for="estado">Estado</label>
-        <input type="text" id="estado" placeholder="Ex: SP">
-    </div>
+    <label for="estado">Estado</label>
+    <input type="text" id="estado">
+
+    <label for="email">E-mail do cliente</label>
+    <input type="email" id="email" placeholder="Opcional para envio por e-mail">
 
     <div class="actions">
         <button class="btn" onclick="gerarRecibo()">Gerar Recibo</button>
@@ -106,11 +107,22 @@
 
     <div id="recibo"></div>
 
-    <div class="actions" id="printBtn" style="display:none;">
-        <button class="btn" onclick="window.print()">Imprimir Recibo</button>
+    <div class="actions" id="botoesExtras" style="display:none;">
+        <button class="btn" onclick="window.print()">Imprimir</button>
+        <button class="btn" onclick="salvarPDF()">Salvar como PDF</button>
+        <button class="btn" onclick="enviarEmail()">Enviar por E-mail</button>
+    </div>
+
+    <div id="historico">
+        <h3>📜 Histórico de Recibos</h3>
+        <div id="listaHistorico"></div>
     </div>
 
     <script>
+        emailjs.init("user_demo"); // Substituir com seu EmailJS user ID
+
+        let reciboAtual = "";
+
         function gerarRecibo() {
             const nome = document.getElementById("nome").value;
             const servico = document.getElementById("servico").value;
@@ -120,13 +132,14 @@
             const estado = document.getElementById("estado").value;
 
             if (!nome || !servico || !valor || !data || !cidade || !estado) {
-                alert("Por favor, preencha todos os campos.");
+                alert("Preencha todos os campos.");
                 return;
             }
 
             const dataFormatada = new Date(data).toLocaleDateString("pt-BR");
+            reciboAtual = `RECIBO\n\nRecebi(emos) de ${nome} a quantia de R$ ${valor} referente ao serviço de ${servico}.\nPara maior clareza firmo(amos) o presente recibo.\n\n${cidade} - ${estado}, ${dataFormatada}\n\n______________________________\nAssinatura do Prestador`;
 
-            const recibo = `
+            const reciboHTML = `
                 <h2 style="text-align:center;">RECIBO</h2>
                 <p>Recebi(emos) de <strong>${nome}</strong> a quantia de <strong>R$ ${valor}</strong> referente ao serviço de <strong>${servico}</strong>.</p>
                 <p>Para maior clareza firmo(amos) o presente recibo.</p>
@@ -137,12 +150,63 @@
                 </div>
             `;
 
-            const reciboDiv = document.getElementById("recibo");
-            reciboDiv.innerHTML = recibo;
-            reciboDiv.style.display = "block";
+            document.getElementById("recibo").innerHTML = reciboHTML;
+            document.getElementById("recibo").style.display = "block";
+            document.getElementById("botoesExtras").style.display = "block";
 
-            document.getElementById("printBtn").style.display = "block";
+            salvarHistorico(nome, dataFormatada, servico, valor);
         }
+
+        function salvarPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(12);
+            doc.text(reciboAtual, 10, 20);
+            doc.save("recibo.pdf");
+        }
+
+        function enviarEmail() {
+            const emailDestino = document.getElementById("email").value;
+            if (!emailDestino) {
+                alert("Informe um e-mail para envio.");
+                return;
+            }
+
+            const templateParams = {
+                to_email: emailDestino,
+                message: reciboAtual
+            };
+
+            emailjs.send("service_demo", "template_demo", templateParams)
+                .then(() => alert("Recibo enviado com sucesso!"))
+                .catch((error) => alert("Erro ao enviar e-mail: " + error));
+        }
+
+        function salvarHistorico(nome, data, servico, valor) {
+            const recibos = JSON.parse(localStorage.getItem("recibos") || "[]");
+            recibos.unshift({ nome, data, servico, valor });
+            localStorage.setItem("recibos", JSON.stringify(recibos));
+            mostrarHistorico();
+        }
+
+        function mostrarHistorico() {
+            const lista = document.getElementById("listaHistorico");
+            lista.innerHTML = "";
+            const recibos = JSON.parse(localStorage.getItem("recibos") || "[]");
+            if (recibos.length === 0) {
+                lista.innerHTML = "<p>Nenhum recibo gerado ainda.</p>";
+                return;
+            }
+            recibos.forEach(r => {
+                const item = document.createElement("div");
+                item.className = "recibo-item";
+                item.innerText = `📌 ${r.nome} - ${r.servico} - R$ ${r.valor} (${r.data})`;
+                lista.appendChild(item);
+            });
+        }
+
+        window.onload = mostrarHistorico;
     </script>
 </body>
 </html>
